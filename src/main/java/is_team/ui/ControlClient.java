@@ -1,0 +1,27 @@
+package is_team.ui;
+
+public class ControlClient {
+  public static void main(String[] args) {
+    try {
+      for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager
+        .getInstalledLookAndFeels()) {
+        if ("Nimbus".equals(info.getName())) {
+          javax.swing.UIManager.setLookAndFeel(info.getClassName());
+          break;
+        }
+      }
+    } catch (Exception ex) {
+      java.util.logging.Logger.getLogger(ControlClient.class.getName())
+        .log(java.util.logging.Level.SEVERE, null, ex);
+    }
+
+    java.awt.EventQueue.invokeLater(new Runnable() {
+      public void run() {
+        new Controller().setVisible(true);
+        AirConditional airConditional = new AirConditional();
+        airConditional.setVisible(true);
+        new Sensor(airConditional).setVisible(true);
+      }
+    });
+  }
+}

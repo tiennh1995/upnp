@@ -23,6 +23,7 @@ public class Device {
   private String strDetails;
   private String strIcon;
   private String strService;
+  private String[] strServices;
 
   public Device(String strIdentity, String strType, String strDetails, String strIcon,
     String strService) {
@@ -33,8 +34,17 @@ public class Device {
     this.strService = strService;
   }
 
+  public Device(String strIdentity, String strType, String strDetails, String strIcon,
+    String[] strServices) {
+    this.strIdentity = strIdentity;
+    this.strType = strType;
+    this.strDetails = strDetails;
+    this.strIcon = strIcon;
+    this.strServices = strServices;
+  }
+
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  LocalDevice getDevice()
+  public LocalDevice getDevice()
     throws ValidationException, LocalServiceBindingException, IOException, ClassNotFoundException {
 
     DeviceIdentity identity = new DeviceIdentity(UDN.uniqueSystemIdentifier(strIdentity));
@@ -45,12 +55,21 @@ public class Device {
       new ModelDetails("IS Team Device", "A demo with is team", "v1"));
 
     Icon icon = new Icon("image/png", 48, 48, 8, getClass().getResource(strIcon));
+    if (this.strServices == null) {
+      LocalService deviceService = new AnnotationLocalServiceBinder()
+        .read(Class.forName(strService));
+      deviceService.setManager(new DefaultServiceManager(deviceService, Class.forName(strService)));
+      return new LocalDevice(identity, type, details, icon, deviceService);
+    } else {
+      LocalService[] deviceServices = new LocalService[this.strServices.length];
+      for (int i = 0; i < this.strServices.length; i++) {
+        deviceServices[i] = new AnnotationLocalServiceBinder().read(Class.forName(strServices[i]));
+        deviceServices[i]
+          .setManager(new DefaultServiceManager(deviceServices[i], Class.forName(strServices[i])));
+      }
+      return new LocalDevice(identity, type, details, icon, deviceServices);
 
-    LocalService deviceService = new AnnotationLocalServiceBinder().read(Class.forName(strService));
-
-    deviceService.setManager(new DefaultServiceManager(deviceService, Class.forName(strService)));
-
-    return new LocalDevice(identity, type, details, icon, deviceService);
+    }
   }
 
   public String getStrIdentity() {
@@ -91,5 +110,13 @@ public class Device {
 
   public void setStrService(String strService) {
     this.strService = strService;
+  }
+
+  public String[] getStrServices() {
+    return strServices;
+  }
+
+  public void setStrServices(String[] strServices) {
+    this.strServices = strServices;
   }
 }

@@ -5,15 +5,20 @@ import org.fourthline.cling.binding.annotations.*;
 @UpnpService(serviceId = @UpnpServiceId("ChangeTemperature"),
   serviceType = @UpnpServiceType(value = "ChangeTemperature", version = 1))
 public class ChangeTemperature {
-  final int MAX_TEMP = 30;
-  final int MIN_TEMP = 15;
-
-  @UpnpStateVariable(defaultValue = "15", sendEvents = false)
+  public final static int MIN_TEMP = 15;
+  public final static int MAX_TEMP = 30;
+  
+  @UpnpStateVariable(defaultValue = "0", sendEvents = false)
   private int temperature = 15;
 
   @UpnpAction
   public void setTemperature(@UpnpInputArgument(name = "NewTemperature") int temperature) {
-    this.temperature = temperature;
+    if (temperature < MIN_TEMP)
+      this.temperature = MIN_TEMP;
+    else if (temperature > MAX_TEMP)
+      this.temperature = MAX_TEMP;
+    else
+      this.temperature = temperature;
     System.out.println("Set temperature is: " + this.temperature);
   }
 
