@@ -2,6 +2,7 @@ package is_team.ui;
 
 import java.util.HashMap;
 
+import javax.swing.ImageIcon;
 import javax.swing.JSlider;
 
 import org.fourthline.cling.UpnpService;
@@ -37,6 +38,9 @@ public class Sensor extends javax.swing.JFrame {
     initComponents();
     setResizable(false);
     setTitle("Sensor");
+    ClassLoader classLoader = getClass().getClassLoader();
+    setIconImage(new ImageIcon(classLoader.getResource("icon/temperature_sensor.png")).getImage());
+    setLocation(500, 0);
     sensorTempLabel.setText(Unit.temperatureLabel + ":");
     sensorUserLabel.setText(Unit.userLabel + ": ");
     sensorUserCheckbox.setText("Yes");
@@ -49,6 +53,26 @@ public class Sensor extends javax.swing.JFrame {
 
     upnpService.getRegistry().addListener(createRegistryListener());
     upnpService.getControlPoint().search(new STAllHeader());
+
+    initEvent();
+  }
+
+  private void initEvent() {
+    controller.getControllerTempSlider().addChangeListener(new javax.swing.event.ChangeListener() {
+      public void stateChanged(javax.swing.event.ChangeEvent evt) {
+        controllerTempSliderStateChanged(evt);
+      }
+    });
+  }
+
+  private void controllerTempSliderStateChanged(javax.swing.event.ChangeEvent evt) {
+    this.callService("AirConditional", "SwitchPower", "Get", "Status", 0);
+    if (isOn) {
+      int currentTemp = ((JSlider) evt.getSource()).getValue();
+      sensorTempSlider.setValue(currentTemp);
+      sensorTempLabel.setText(
+        Unit.temperatureLabel + " (" + String.valueOf(currentTemp) + Unit.tempUnit + "): ");
+    }
   }
 
   // Event and GUI
@@ -62,10 +86,7 @@ public class Sensor extends javax.swing.JFrame {
   }
 
   private void sensorUserCheckboxActionPerformed(java.awt.event.ActionEvent evt) {
-    if (sensorUserCheckbox.isSelected())
-      this.hasUser = true;
-    else
-      this.hasUser = false;
+    this.hasUser = sensorUserCheckbox.isSelected();
   }
 
   private void setLimitSensorTempSlider() {
@@ -110,8 +131,6 @@ public class Sensor extends javax.swing.JFrame {
     String actionName) {
     try {
       RemoteDevice remoteDevice = remoteDevices.get(deviceName);
-      for (int i = 0; i < remoteDevices.keySet().toArray().length; i++)
-        System.out.println("LIST SERVICETYPE: " + remoteDevices.keySet().toArray()[i].toString());
       if (remoteDevice != null) {
         RemoteService remoteService = remoteDevice.findService(new UDAServiceId(UDAServiceId));
         if (remoteService != null) {

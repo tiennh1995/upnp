@@ -1,5 +1,7 @@
 package is_team.ui;
 
+import javax.swing.ImageIcon;
+
 import is_team.service.ChangeSpeed;
 import is_team.service.ChangeTemperature;
 
@@ -8,8 +10,11 @@ public class AirConditional extends javax.swing.JFrame {
 
   public AirConditional() {
     initComponents();
+    ClassLoader classLoader = getClass().getClassLoader();
+    setIconImage(new ImageIcon(classLoader.getResource("icon/air_conditional.png")).getImage());
     setTitle("AirConditional");
     setResizable(false);
+    setLocation(0, 0);
     airTempLabel.setText(Unit.temperatureLabel + ":");
     airTempIndexLabel.setText(ChangeTemperature.MIN_TEMP + Unit.tempUnit);
     airSpeedLabel.setText(Unit.speedLabel + ":");
