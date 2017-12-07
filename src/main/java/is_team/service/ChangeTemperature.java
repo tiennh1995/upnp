@@ -7,8 +7,8 @@ import org.fourthline.cling.binding.annotations.*;
 public class ChangeTemperature {
   public final static int MIN_TEMP = 15;
   public final static int MAX_TEMP = 30;
-  
-  @UpnpStateVariable(defaultValue = "0", sendEvents = false)
+
+  @UpnpStateVariable(defaultValue = "0", sendEvents = true)
   private int temperature = 15;
 
   @UpnpAction

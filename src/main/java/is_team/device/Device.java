@@ -54,7 +54,8 @@ public class Device {
     DeviceDetails details = new DeviceDetails(strDetails, new ManufacturerDetails("ACME"),
       new ModelDetails("IS Team Device", "A demo with is team", "v1"));
 
-    Icon icon = new Icon("image/png", 48, 48, 8, getClass().getResource(strIcon));
+    ClassLoader classLoader = getClass().getClassLoader();
+    Icon icon = new Icon("image/png", 48, 48, 8, classLoader.getResource(strIcon));
     if (this.strServices == null) {
       LocalService deviceService = new AnnotationLocalServiceBinder()
         .read(Class.forName(strService));
@@ -67,8 +68,8 @@ public class Device {
         deviceServices[i]
           .setManager(new DefaultServiceManager(deviceServices[i], Class.forName(strServices[i])));
       }
-      return new LocalDevice(identity, type, details, icon, deviceServices);
 
+      return new LocalDevice(identity, type, details, icon, deviceServices);
     }
   }
 

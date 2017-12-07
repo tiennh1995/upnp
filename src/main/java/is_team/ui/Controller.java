@@ -1,51 +1,252 @@
 package is_team.ui;
 
+import java.awt.event.ActionEvent;
+import java.util.HashMap;
+
 import javax.swing.JSlider;
+
+import org.fourthline.cling.UpnpService;
+import org.fourthline.cling.UpnpServiceImpl;
+import org.fourthline.cling.controlpoint.ActionCallback;
+import org.fourthline.cling.model.action.ActionArgumentValue;
+import org.fourthline.cling.model.action.ActionInvocation;
+import org.fourthline.cling.model.message.UpnpResponse;
+import org.fourthline.cling.model.message.header.STAllHeader;
+import org.fourthline.cling.model.meta.Action;
+import org.fourthline.cling.model.meta.RemoteDevice;
+import org.fourthline.cling.model.meta.RemoteService;
+import org.fourthline.cling.model.types.UDAServiceId;
+import org.fourthline.cling.registry.DefaultRegistryListener;
+import org.fourthline.cling.registry.Registry;
+import org.fourthline.cling.registry.RegistryListener;
+
+import is_team.service.ChangeDirection;
+import is_team.service.ChangeSpeed;
+import is_team.service.ChangeTemperature;
 
 public class Controller extends javax.swing.JFrame {
   private static final long serialVersionUID = 1L;
 
-  public Controller() {
+  private HashMap<String, RemoteDevice> remoteDevices = new HashMap<String, RemoteDevice>();
+  private UpnpService upnpService = new UpnpServiceImpl();
+  private AirConditional airConditional;
+
+  private boolean isOn = false;
+
+  public Controller(AirConditional airConditional) {
     initComponents();
+    this.airConditional = airConditional;
+    setResizable(false);
+    setSize(650, 372);
+
+    controllerStateLabel.setText(Unit.stateLabel + ":");
+    controllerStateCheckbox.setText("ON");
+    controllerStateCheckbox.setSelected(isOn);
+    controllerSpeedLabel.setText(Unit.speedLabel + ":");
+    controllerDirectionLabel.setText(Unit.directionLabel + ":");
+    controllerDirectionLeftLabel.setText("Left");
+    controllerDirectionMiddleLabel.setText("Middle");
+    controllerDirectionRightLabel.setText("Right");
+    controllerTempLabel.setText(Unit.temperatureLabel + ":");
+    controllerSpeedLeftLabel.setText(ChangeSpeed.MIN_SPEED + Unit.speedUnit);
+    controllerSpeedMiddleLabel
+      .setText((ChangeSpeed.MIN_SPEED + ChangeSpeed.MAX_SPEED) / 2 + Unit.speedUnit);
+    controllerSpeedRightLabel.setText(ChangeSpeed.MAX_SPEED + Unit.speedUnit);
+    controllerTempLeftLabel.setText(ChangeTemperature.MIN_TEMP + Unit.tempUnit);
+    controllerTempMiddleLabel
+      .setText((ChangeTemperature.MIN_TEMP + ChangeTemperature.MAX_TEMP) / 2 + Unit.tempUnit);
+    controllerTempRightLabel.setText(ChangeTemperature.MAX_TEMP + Unit.tempUnit);
+
     setTitle("Controller");
     setLimitControllerTempSlider();
     setLimitControllerSpeedSlider();
     setLimitControllerWindSlider();
+
+    upnpService.getRegistry().addListener(createRegistryListener());
+    upnpService.getControlPoint().search(new STAllHeader());
   }
 
+  // Services
+  public RegistryListener createRegistryListener() {
+    return new DefaultRegistryListener() {
+      @Override
+      public void remoteDeviceAdded(Registry registry, RemoteDevice remoteDevice) {
+        addRemoteDevice(remoteDevice);
+      }
+
+      @Override
+      public void remoteDeviceRemoved(Registry registry, RemoteDevice remoteDevice) {
+        removeRemoteDevice(remoteDevice);
+      }
+    };
+  }
+
+  public void callService(String deviceName, String UDAServiceId, String actionType,
+    String attribute, Object value) {
+    String actionName = actionType + attribute;
+    ActionInvocation<RemoteService> actionInvocation = getActionInvocation(deviceName, UDAServiceId,
+      actionName);
+    ActionCallback actionCallback = null;
+    if (actionInvocation != null) {
+      if (actionType.equals("Set")) {
+        actionInvocation.setInput("New" + attribute, value);
+        actionCallback = setCallback(actionInvocation);
+      } else {
+        actionCallback = getCallback(actionInvocation);
+      }
+      upnpService.getControlPoint().execute(actionCallback);
+    }
+  }
+
+  public ActionInvocation<RemoteService> getActionInvocation(String deviceName, String UDAServiceId,
+    String actionName) {
+    try {
+      RemoteDevice remoteDevice = remoteDevices.get(deviceName);
+      for (int i = 0; i < remoteDevices.keySet().toArray().length; i++)
+        System.out.println("LIST SERVICETYPE: " + remoteDevices.keySet().toArray()[i].toString());
+      if (remoteDevice != null) {
+        RemoteService remoteService = remoteDevice.findService(new UDAServiceId(UDAServiceId));
+        if (remoteService != null) {
+          Action<RemoteService> actionService = remoteService.getAction(actionName);
+          return new ActionInvocation<RemoteService>(actionService);
+        }
+      } else {
+        System.out.println("Remote device khong tim thay!");
+      }
+    } catch (Exception e) {
+      System.out.println("System err: " + e);
+    }
+    return null;
+  }
+
+  public ActionCallback setCallback(ActionInvocation<RemoteService> setInvocation) {
+    return new ActionCallback(setInvocation) {
+      @Override
+      public void success(@SuppressWarnings("rawtypes") ActionInvocation invocation) {
+        @SuppressWarnings("rawtypes")
+        ActionArgumentValue[] args = invocation.getInput();
+        for (int i = 0; i < args.length; i++) {
+          String argument = args[i].getArgument().getName();
+          Object value = (Integer) args[i].getValue();
+          if (argument.equals("NewTemperature")) {
+            airConditional.setAirTempIndexLabel((Integer) value);
+          } else if (argument.equals("NewSpeed")) {
+            airConditional.setAirSpeedIndexLabel((Integer) value);
+          } else if (argument.equals("NewDirection")) {
+            airConditional.setAirDirectionIndexLabel((Integer) value);
+          } else if (argument.equals("NewStatus")) {
+            isOn = (Boolean) value;
+          }
+        }
+      }
+
+      @Override
+      public void failure(@SuppressWarnings("rawtypes") ActionInvocation invocation,
+        UpnpResponse operation, String defaultMsg) {
+        System.err.println(defaultMsg);
+      }
+    };
+  }
+
+  public ActionCallback getCallback(ActionInvocation<RemoteService> invocation) {
+    return new ActionCallback(invocation) {
+      @Override
+      public void success(@SuppressWarnings("rawtypes") ActionInvocation invocation) {
+      }
+
+      @Override
+      public void failure(@SuppressWarnings("rawtypes") ActionInvocation invocation,
+        UpnpResponse operation, String defaultMsg) {
+        System.err.println(defaultMsg);
+      }
+    };
+  }
+
+  public void addRemoteDevice(RemoteDevice remoteDevice) {
+    System.out.println("ADD DEVICE: " + remoteDevice.getType().getDisplayString());
+    if (!remoteDevices.containsKey(remoteDevice.getType().getDisplayString()))
+      remoteDevices.put(remoteDevice.getType().getDisplayString(), remoteDevice);
+  }
+
+  public void removeRemoteDevice(RemoteDevice remoteDevice) {
+    System.out.println("REMOVE DEVICE: " + remoteDevice.getType().getDisplayString());
+    remoteDevices.remove(remoteDevice.getType().getDisplayString());
+  }
+
+  // Interface
+  void setControllerStateCheckbox(boolean isOn) {
+    controllerStateCheckbox.setSelected(isOn);
+  }
+
+  void setControllerTempSlider(int value) {
+    controllerTempSlider.setValue(value);
+    controllerTempLabel.setText(Unit.temperatureLabel + " (" + value + Unit.tempUnit + "): ");
+  }
+
+  void setAirSpeedIndexLabel(int value) {
+    controllerSpeedSlider.setValue(value);
+    controllerSpeedLabel.setText(Unit.speedLabel + " (" + value + Unit.speedUnit + "): ");
+  }
+
+  void setAirDirectionIndexLabel(int value) {
+    controllerDirectionSlider.setValue(value);
+    controllerDirectionLabel
+      .setText(Unit.directionLabel + " (" + value + Unit.directionUnit + "): ");
+  }
+
+  // Event of UI
   private void setLimitControllerTempSlider() {
-    controllerTempSlider.setMinimum(10);
-    controllerTempSlider.setMaximum(30);
-    controllerTempSlider.setValue(20);
+    controllerTempSlider.setMinimum(ChangeTemperature.MIN_TEMP);
+    controllerTempSlider.setMaximum(ChangeTemperature.MAX_TEMP);
+    controllerTempSlider.setValue(ChangeTemperature.MIN_TEMP);
   }
 
   private void setLimitControllerSpeedSlider() {
-    controllerSpeedSlider.setMinimum(20);
-    controllerSpeedSlider.setMaximum(40);
-    controllerSpeedSlider.setValue(30);
+    controllerSpeedSlider.setMinimum(ChangeSpeed.MIN_SPEED);
+    controllerSpeedSlider.setMaximum(ChangeSpeed.MAX_SPEED);
+    controllerSpeedSlider.setValue(ChangeSpeed.MIN_SPEED);
   }
 
   private void setLimitControllerWindSlider() {
-    controllerDirectionSlider.setMinimum(-60);
-    controllerDirectionSlider.setMaximum(60);
-    controllerDirectionSlider.setValue(0);
+    controllerDirectionSlider.setMinimum(ChangeDirection.MIN_DIRECTION);
+    controllerDirectionSlider.setMaximum(ChangeDirection.MAX_DIRECTION);
+    controllerDirectionSlider
+      .setValue((ChangeDirection.MIN_DIRECTION + ChangeDirection.MAX_DIRECTION) / 2);
   }
 
   private void controllerTempSliderStateChanged(javax.swing.event.ChangeEvent evt) {
     int currentTemp = ((JSlider) evt.getSource()).getValue();
     controllerTempLabel
-      .setText("Temperature (" + String.valueOf(currentTemp) + Unit.tempUnit + "): ");
+      .setText(Unit.temperatureLabel + " (" + String.valueOf(currentTemp) + Unit.tempUnit + "): ");
+    this.callService("AirConditional", "ChangeTemperature", "Set", "Temperature", currentTemp);
   }
 
   private void controllerSpeedSliderStateChanged(javax.swing.event.ChangeEvent evt) {
     int currentSpeed = ((JSlider) evt.getSource()).getValue();
-    controllerSpeedLabel.setText("Speed (" + String.valueOf(currentSpeed) + Unit.speedUnit + "): ");
+    controllerSpeedLabel
+      .setText(Unit.speedLabel + " (" + String.valueOf(currentSpeed) + Unit.speedUnit + "): ");
+    this.callService("AirConditional", "ChangeSpeed", "Set", "Speed", currentSpeed);
   }
 
   private void controllerDirectionSliderStateChanged(javax.swing.event.ChangeEvent evt) {
     int currentDirection = ((JSlider) evt.getSource()).getValue();
-    controllerDirectionLabel
-      .setText("Direction (" + String.valueOf(currentDirection) + Unit.directionUnit + "): ");
+    String direction = null;
+    if (currentDirection > 0)
+      direction = "Right";
+    else if (currentDirection < 0)
+      direction = "Left";
+    else
+      direction = "Middle";
+    controllerDirectionLabel.setText(Unit.directionLabel + " (" + direction + "): ");
+    this.callService("AirConditional", "ChangeDirection", "Set", "Direction", currentDirection);
+  }
+
+  private void controllerStateCheckboxStateChanged(ActionEvent evt) {
+    if (controllerStateCheckbox.isSelected()) {
+      this.callService("AirConditional", "SwitchPower", "Set", "Status", true);
+    } else {
+      this.callService("AirConditional", "SwitchPower", "Set", "Status", false);
+    }
   }
 
   private void initComponents() {
@@ -70,19 +271,11 @@ public class Controller extends javax.swing.JFrame {
 
     setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
-    controllerStateLabel.setText("State:");
-
-    controllerStateCheckbox.setText("ON");
-
-    controllerSpeedLabel.setText("Speed:");
-
     controllerSpeedSlider.addChangeListener(new javax.swing.event.ChangeListener() {
       public void stateChanged(javax.swing.event.ChangeEvent evt) {
         controllerSpeedSliderStateChanged(evt);
       }
     });
-
-    controllerDirectionLabel.setText("Direction: ");
 
     controllerDirectionSlider.addChangeListener(new javax.swing.event.ChangeListener() {
       public void stateChanged(javax.swing.event.ChangeEvent evt) {
@@ -90,31 +283,17 @@ public class Controller extends javax.swing.JFrame {
       }
     });
 
-    controllerDirectionLeftLabel.setText("Left");
-
-    controllerDirectionMiddleLabel.setText("Middle");
-
-    controllerDirectionRightLabel.setText("Right");
-
-    controllerTempLabel.setText("Temperature:");
-
     controllerTempSlider.addChangeListener(new javax.swing.event.ChangeListener() {
       public void stateChanged(javax.swing.event.ChangeEvent evt) {
         controllerTempSliderStateChanged(evt);
       }
     });
 
-    controllerSpeedLeftLabel.setText("20km/h");
-
-    controllerSpeedMiddleLabel.setText("30km/h");
-
-    controllerSpeedRightLabel.setText("40km/h");
-
-    controllerTempLeftLabel.setText("10℃");
-
-    controllerTempMiddleLabel.setText("20℃");
-
-    controllerTempRightLabel.setText("30℃");
+    controllerStateCheckbox.addActionListener(new java.awt.event.ActionListener() {
+      public void actionPerformed(java.awt.event.ActionEvent evt) {
+        controllerStateCheckboxStateChanged(evt);
+      }
+    });
 
     javax.swing.GroupLayout controllerPanelLayout = new javax.swing.GroupLayout(controllerPanel);
     controllerPanel.setLayout(controllerPanelLayout);

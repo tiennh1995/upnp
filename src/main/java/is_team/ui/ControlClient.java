@@ -17,10 +17,11 @@ public class ControlClient {
 
     java.awt.EventQueue.invokeLater(new Runnable() {
       public void run() {
-        new Controller().setVisible(true);
         AirConditional airConditional = new AirConditional();
         airConditional.setVisible(true);
-        new Sensor(airConditional).setVisible(true);
+        Controller controller = new Controller(airConditional);
+        controller.setVisible(true);
+        new Sensor(airConditional, controller).setVisible(true);
       }
     });
   }

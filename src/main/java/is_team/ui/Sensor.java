@@ -24,17 +24,23 @@ import is_team.service.ChangeTemperature;
 public class Sensor extends javax.swing.JFrame {
   private static final long serialVersionUID = 1L;
 
+  private HashMap<String, RemoteDevice> remoteDevices = new HashMap<String, RemoteDevice>();
+  private UpnpService upnpService = new UpnpServiceImpl();
   private AirConditional airConditional;
-  public HashMap<String, RemoteDevice> remoteDevices = new HashMap<String, RemoteDevice>();
-  public UpnpService upnpService = new UpnpServiceImpl();
+  private Controller controller;
+  private boolean hasUser = false;
+  private boolean isOn = false;
 
-  public Sensor(AirConditional airConditional) {
+  public Sensor(AirConditional airConditional, Controller controller) {
     this.airConditional = airConditional;
+    this.controller = controller;
     initComponents();
+    setResizable(false);
     setTitle("Sensor");
-    sensorTempLabel.setText("Temperature:");
-    sensorUserLabel.setText("User: ");
+    sensorTempLabel.setText(Unit.temperatureLabel + ":");
+    sensorUserLabel.setText(Unit.userLabel + ": ");
     sensorUserCheckbox.setText("Yes");
+    sensorUserCheckbox.setSelected(hasUser);
     sensorTempLeftLabel.setText(ChangeTemperature.MIN_TEMP + Unit.tempUnit);
     sensorTempMiddleLabel
       .setText((ChangeTemperature.MIN_TEMP + ChangeTemperature.MAX_TEMP) / 2 + Unit.tempUnit);
@@ -49,11 +55,17 @@ public class Sensor extends javax.swing.JFrame {
   private void sensorTempSliderStateChanged(javax.swing.event.ChangeEvent evt) {
     int currentTemp = ((JSlider) evt.getSource()).getValue();
     sensorTempLabel.setText("Temperature (" + String.valueOf(currentTemp) + Unit.tempUnit + "): ");
-    this.callService("AirConditional", "ChangeTemperature", "SetTemperature", "setCallback",
-      currentTemp);
+    this.callService("AirConditional", "SwitchPower", "Get", "Status", 0);
+    if (hasUser && isOn) {
+      this.callService("AirConditional", "ChangeTemperature", "Set", "Temperature", currentTemp);
+    }
   }
 
   private void sensorUserCheckboxActionPerformed(java.awt.event.ActionEvent evt) {
+    if (sensorUserCheckbox.isSelected())
+      this.hasUser = true;
+    else
+      this.hasUser = false;
   }
 
   private void setLimitSensorTempSlider() {
@@ -77,14 +89,15 @@ public class Sensor extends javax.swing.JFrame {
     };
   }
 
-  public void callService(String serviceType, String UDAServiceId, String action, String function,
-    int value) {
-    ActionInvocation<RemoteService> actionInvocation = getActionInvocation(serviceType,
-      UDAServiceId, action, function, value);
+  public void callService(String deviceName, String UDAServiceId, String actionType,
+    String attribute, Object value) {
+    String actionName = actionType + attribute;
+    ActionInvocation<RemoteService> actionInvocation = getActionInvocation(deviceName, UDAServiceId,
+      actionName);
     ActionCallback actionCallback = null;
     if (actionInvocation != null) {
-      if (function.equals("setCallback")) {
-        actionInvocation.setInput("NewTemperature", value);
+      if (actionType.equals("Set")) {
+        actionInvocation.setInput("New" + attribute, value);
         actionCallback = setCallback(actionInvocation);
       } else {
         actionCallback = getCallback(actionInvocation);
@@ -93,16 +106,16 @@ public class Sensor extends javax.swing.JFrame {
     }
   }
 
-  public ActionInvocation<RemoteService> getActionInvocation(String serviceType,
-    String UDAServiceId, String action, String function, int value) {
+  public ActionInvocation<RemoteService> getActionInvocation(String deviceName, String UDAServiceId,
+    String actionName) {
     try {
-      RemoteDevice remoteDevice = remoteDevices.get(serviceType);
+      RemoteDevice remoteDevice = remoteDevices.get(deviceName);
       for (int i = 0; i < remoteDevices.keySet().toArray().length; i++)
         System.out.println("LIST SERVICETYPE: " + remoteDevices.keySet().toArray()[i].toString());
       if (remoteDevice != null) {
         RemoteService remoteService = remoteDevice.findService(new UDAServiceId(UDAServiceId));
         if (remoteService != null) {
-          Action<RemoteService> actionService = remoteService.getAction(action);
+          Action<RemoteService> actionService = remoteService.getAction(actionName);
           return new ActionInvocation<RemoteService>(actionService);
         }
       } else {
@@ -121,12 +134,11 @@ public class Sensor extends javax.swing.JFrame {
         @SuppressWarnings("rawtypes")
         ActionArgumentValue[] args = invocation.getInput();
         for (int i = 0; i < args.length; i++) {
-          String value = args[i].getValue().toString();
-          if (args[i].getArgument().getName().equals("NewTemperature"))
-            value += Unit.tempUnit;
-          else if (args[i].getArgument().getName().equals("NewSpeed"))
-            value += Unit.speedUnit;
-          airConditional.setAirTempIndexLabel(value);
+          if (args[i].getArgument().getName().equals("NewTemperature")) {
+            int value = (Integer) args[i].getValue();
+            airConditional.setAirTempIndexLabel(value);
+            controller.setControllerTempSlider(value);
+          }
         }
       }
 
@@ -142,8 +154,13 @@ public class Sensor extends javax.swing.JFrame {
     return new ActionCallback(invocation) {
       @Override
       public void success(@SuppressWarnings("rawtypes") ActionInvocation invocation) {
-        System.out
-          .println("Get value of temperature: " + invocation.getOutput("Temperature").getValue());
+        @SuppressWarnings("rawtypes")
+        ActionArgumentValue[] args = invocation.getOutput();
+        for (int i = 0; i < args.length; i++) {
+          if (args[i].getArgument().getName().equals("Status")) {
+            isOn = (Boolean) args[i].getValue();
+          }
+        }
       }
 
       @Override
