@@ -1,35 +1,41 @@
 package is_team.ui;
 
-import java.util.HashMap;
-
-import org.fourthline.cling.UpnpService;
-import org.fourthline.cling.UpnpServiceImpl;
-import org.fourthline.cling.model.meta.RemoteDevice;
-
 import is_team.service.ChangeSpeed;
 import is_team.service.ChangeTemperature;
 
 public class AirConditional extends javax.swing.JFrame {
   private static final long serialVersionUID = 1L;
 
-  public HashMap<String, RemoteDevice> remoteDevices = new HashMap<String, RemoteDevice>();
-  public UpnpService upnpService = new UpnpServiceImpl();
-
   public AirConditional() {
     initComponents();
     setTitle("AirConditional");
-
-    airTempLabel.setText("Temperature:");
+    setResizable(false);
+    airTempLabel.setText(Unit.temperatureLabel + ":");
     airTempIndexLabel.setText(ChangeTemperature.MIN_TEMP + Unit.tempUnit);
-    airSpeedLabel.setText("Speed:");
+    airSpeedLabel.setText(Unit.speedLabel + ":");
     airSpeedIndexLabel.setText(ChangeSpeed.MIN_SPEED + Unit.speedUnit);
-    airDirectionLabel.setText("Wind Conditional:");
-    airDirectionIndexLabel.setText("Left");
+    airDirectionLabel.setText(Unit.directionLabel + ":");
+    airDirectionIndexLabel.setText("Middle");
   }
 
   // Interface change UI
-  void setAirTempIndexLabel(String txt) {
-    airTempIndexLabel.setText(txt);
+  void setAirTempIndexLabel(int value) {
+    airTempIndexLabel.setText(value + Unit.tempUnit);
+  }
+
+  void setAirSpeedIndexLabel(int value) {
+    airSpeedIndexLabel.setText(value + Unit.speedUnit);
+  }
+
+  void setAirDirectionIndexLabel(int value) {
+    String direction = null;
+    if (value > 0)
+      direction = "Right";
+    else if (value < 0)
+      direction = "Left";
+    else
+      direction = "Middle";
+    airDirectionIndexLabel.setText(direction);
   }
 
   // UI

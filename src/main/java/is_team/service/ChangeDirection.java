@@ -11,8 +11,8 @@ import org.fourthline.cling.binding.annotations.UpnpStateVariable;
 @UpnpService(serviceId = @UpnpServiceId("ChangeDirection"),
   serviceType = @UpnpServiceType(value = "ChangeDirection", version = 1))
 public class ChangeDirection {
-  final int MIN_DIRECTION = -60;
-  final int MAX_DIRECTION = 60;
+  public final static int MIN_DIRECTION = -60;
+  public final static int MAX_DIRECTION = 60;
 
   @UpnpStateVariable(defaultValue = "0", sendEvents = false)
   private int direction = 0;
