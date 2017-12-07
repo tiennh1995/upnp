@@ -3,6 +3,7 @@ package is_team.ui;
 import java.awt.event.ActionEvent;
 import java.util.HashMap;
 
+import javax.swing.ImageIcon;
 import javax.swing.JSlider;
 
 import org.fourthline.cling.UpnpService;
@@ -38,6 +39,10 @@ public class Controller extends javax.swing.JFrame {
     this.airConditional = airConditional;
     setResizable(false);
     setSize(650, 372);
+    setTitle("Controller");
+    setLocation(200, 360);
+    ClassLoader classLoader = getClass().getClassLoader();
+    setIconImage(new ImageIcon(classLoader.getResource("icon/controller.png")).getImage());       
 
     controllerStateLabel.setText(Unit.stateLabel + ":");
     controllerStateCheckbox.setText("ON");
@@ -57,7 +62,6 @@ public class Controller extends javax.swing.JFrame {
       .setText((ChangeTemperature.MIN_TEMP + ChangeTemperature.MAX_TEMP) / 2 + Unit.tempUnit);
     controllerTempRightLabel.setText(ChangeTemperature.MAX_TEMP + Unit.tempUnit);
 
-    setTitle("Controller");
     setLimitControllerTempSlider();
     setLimitControllerSpeedSlider();
     setLimitControllerWindSlider();
@@ -102,8 +106,6 @@ public class Controller extends javax.swing.JFrame {
     String actionName) {
     try {
       RemoteDevice remoteDevice = remoteDevices.get(deviceName);
-      for (int i = 0; i < remoteDevices.keySet().toArray().length; i++)
-        System.out.println("LIST SERVICETYPE: " + remoteDevices.keySet().toArray()[i].toString());
       if (remoteDevice != null) {
         RemoteService remoteService = remoteDevice.findService(new UDAServiceId(UDAServiceId));
         if (remoteService != null) {
@@ -127,7 +129,7 @@ public class Controller extends javax.swing.JFrame {
         ActionArgumentValue[] args = invocation.getInput();
         for (int i = 0; i < args.length; i++) {
           String argument = args[i].getArgument().getName();
-          Object value = (Integer) args[i].getValue();
+          Object value = args[i].getValue();
           if (argument.equals("NewTemperature")) {
             airConditional.setAirTempIndexLabel((Integer) value);
           } else if (argument.equals("NewSpeed")) {
@@ -218,14 +220,16 @@ public class Controller extends javax.swing.JFrame {
     int currentTemp = ((JSlider) evt.getSource()).getValue();
     controllerTempLabel
       .setText(Unit.temperatureLabel + " (" + String.valueOf(currentTemp) + Unit.tempUnit + "): ");
-    this.callService("AirConditional", "ChangeTemperature", "Set", "Temperature", currentTemp);
+    if (isOn)
+      this.callService("AirConditional", "ChangeTemperature", "Set", "Temperature", currentTemp);
   }
 
   private void controllerSpeedSliderStateChanged(javax.swing.event.ChangeEvent evt) {
     int currentSpeed = ((JSlider) evt.getSource()).getValue();
     controllerSpeedLabel
       .setText(Unit.speedLabel + " (" + String.valueOf(currentSpeed) + Unit.speedUnit + "): ");
-    this.callService("AirConditional", "ChangeSpeed", "Set", "Speed", currentSpeed);
+    if (isOn)
+      this.callService("AirConditional", "ChangeSpeed", "Set", "Speed", currentSpeed);
   }
 
   private void controllerDirectionSliderStateChanged(javax.swing.event.ChangeEvent evt) {
@@ -238,15 +242,17 @@ public class Controller extends javax.swing.JFrame {
     else
       direction = "Middle";
     controllerDirectionLabel.setText(Unit.directionLabel + " (" + direction + "): ");
-    this.callService("AirConditional", "ChangeDirection", "Set", "Direction", currentDirection);
+    if (isOn)
+      this.callService("AirConditional", "ChangeDirection", "Set", "Direction", currentDirection);
   }
 
   private void controllerStateCheckboxStateChanged(ActionEvent evt) {
-    if (controllerStateCheckbox.isSelected()) {
-      this.callService("AirConditional", "SwitchPower", "Set", "Status", true);
-    } else {
-      this.callService("AirConditional", "SwitchPower", "Set", "Status", false);
-    }
+    this.callService("AirConditional", "SwitchPower", "Set", "Status",
+      controllerStateCheckbox.isSelected());
+  }
+
+  public javax.swing.JSlider getControllerTempSlider() {
+    return controllerTempSlider;
   }
 
   private void initComponents() {
