@@ -1,9 +1,12 @@
 package is_team.ui;
 
 import java.awt.event.ActionEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.HashMap;
 
 import javax.swing.ImageIcon;
+import javax.swing.JLabel;
 import javax.swing.JSlider;
 
 import org.fourthline.cling.UpnpService;
@@ -42,7 +45,7 @@ public class Controller extends javax.swing.JFrame {
     setTitle("Controller");
     setLocation(200, 360);
     ClassLoader classLoader = getClass().getClassLoader();
-    setIconImage(new ImageIcon(classLoader.getResource("icon/controller.png")).getImage());       
+    setIconImage(new ImageIcon(classLoader.getResource("icon/controller.png")).getImage());
 
     controllerStateLabel.setText(Unit.stateLabel + ":");
     controllerStateCheckbox.setText("ON");
@@ -66,8 +69,30 @@ public class Controller extends javax.swing.JFrame {
     setLimitControllerSpeedSlider();
     setLimitControllerWindSlider();
 
+    initEvent();
+
     upnpService.getRegistry().addListener(createRegistryListener());
     upnpService.getControlPoint().search(new STAllHeader());
+  }
+
+  // Event change from sensor
+  private void initEvent() {
+    airConditional.getAirTempIndexLabel().addPropertyChangeListener(new PropertyChangeListener() {
+      public void propertyChange(PropertyChangeEvent evt) {
+        airTempStateChanged(evt);
+      }
+    });
+  }
+
+  private void airTempStateChanged(PropertyChangeEvent evt) {
+    this.callService("AirConditional", "SwitchPower", "Get", "Status", 0);
+    if (isOn) {
+      String temperature = ((JLabel) evt.getSource()).getText().replaceAll(Unit.tempUnit, "");
+      int currentTemp = Integer.valueOf(temperature);
+      controllerTempSlider.setValue(currentTemp);
+      controllerTempLabel.setText(
+        Unit.temperatureLabel + " (" + String.valueOf(currentTemp) + Unit.tempUnit + "): ");
+    }
   }
 
   // Services
@@ -133,6 +158,7 @@ public class Controller extends javax.swing.JFrame {
           if (argument.equals("NewTemperature")) {
             airConditional.setAirTempIndexLabel((Integer) value);
           } else if (argument.equals("NewSpeed")) {
+            System.out.println("CO VAO DAY");
             airConditional.setAirSpeedIndexLabel((Integer) value);
           } else if (argument.equals("NewDirection")) {
             airConditional.setAirDirectionIndexLabel((Integer) value);
@@ -192,8 +218,14 @@ public class Controller extends javax.swing.JFrame {
 
   void setAirDirectionIndexLabel(int value) {
     controllerDirectionSlider.setValue(value);
-    controllerDirectionLabel
-      .setText(Unit.directionLabel + " (" + value + Unit.directionUnit + "): ");
+    String direction = null;
+    if (value > 10)
+      direction = "Right";
+    else if (value < -10)
+      direction = "Left";
+    else
+      direction = "Middle";
+    controllerDirectionLabel.setText(Unit.directionLabel + " (" + direction + "): ");
   }
 
   // Event of UI
@@ -235,9 +267,9 @@ public class Controller extends javax.swing.JFrame {
   private void controllerDirectionSliderStateChanged(javax.swing.event.ChangeEvent evt) {
     int currentDirection = ((JSlider) evt.getSource()).getValue();
     String direction = null;
-    if (currentDirection > 0)
+    if (currentDirection > 10)
       direction = "Right";
-    else if (currentDirection < 0)
+    else if (currentDirection < -10)
       direction = "Left";
     else
       direction = "Middle";
@@ -249,10 +281,6 @@ public class Controller extends javax.swing.JFrame {
   private void controllerStateCheckboxStateChanged(ActionEvent evt) {
     this.callService("AirConditional", "SwitchPower", "Set", "Status",
       controllerStateCheckbox.isSelected());
-  }
-
-  public javax.swing.JSlider getControllerTempSlider() {
-    return controllerTempSlider;
   }
 
   private void initComponents() {

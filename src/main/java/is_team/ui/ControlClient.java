@@ -21,7 +21,7 @@ public class ControlClient {
         airConditional.setVisible(true);
         Controller controller = new Controller(airConditional);
         controller.setVisible(true);
-        new Sensor(airConditional, controller).setVisible(true);
+        new Sensor(airConditional).setVisible(true);
       }
     });
   }

@@ -34,13 +34,17 @@ public class AirConditional extends javax.swing.JFrame {
 
   void setAirDirectionIndexLabel(int value) {
     String direction = null;
-    if (value > 0)
+    if (value > 10)
       direction = "Right";
-    else if (value < 0)
+    else if (value < -10)
       direction = "Left";
     else
       direction = "Middle";
     airDirectionIndexLabel.setText(direction);
+  }
+
+  public javax.swing.JLabel getAirTempIndexLabel() {
+    return airTempIndexLabel;
   }
 
   // UI
@@ -117,12 +121,12 @@ public class AirConditional extends javax.swing.JFrame {
   }
 
   // Variables declaration - do not modify//GEN-BEGIN:variables
-  public javax.swing.JPanel airPanel;
-  public javax.swing.JLabel airSpeedIndexLabel;
-  public javax.swing.JLabel airSpeedLabel;
-  public javax.swing.JLabel airTempIndexLabel;
-  public javax.swing.JLabel airTempLabel;
-  public javax.swing.JLabel airDirectionIndexLabel;
-  public javax.swing.JLabel airDirectionLabel;
+  private javax.swing.JPanel airPanel;
+  private javax.swing.JLabel airSpeedIndexLabel;
+  private javax.swing.JLabel airSpeedLabel;
+  private javax.swing.JLabel airTempIndexLabel;
+  private javax.swing.JLabel airTempLabel;
+  private javax.swing.JLabel airDirectionIndexLabel;
+  private javax.swing.JLabel airDirectionLabel;
   // End of variables declaration//GEN-END:variables
 }

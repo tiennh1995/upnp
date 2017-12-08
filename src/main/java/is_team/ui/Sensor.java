@@ -1,8 +1,11 @@
 package is_team.ui;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.HashMap;
 
 import javax.swing.ImageIcon;
+import javax.swing.JLabel;
 import javax.swing.JSlider;
 
 import org.fourthline.cling.UpnpService;
@@ -28,13 +31,11 @@ public class Sensor extends javax.swing.JFrame {
   private HashMap<String, RemoteDevice> remoteDevices = new HashMap<String, RemoteDevice>();
   private UpnpService upnpService = new UpnpServiceImpl();
   private AirConditional airConditional;
-  private Controller controller;
   private boolean hasUser = false;
   private boolean isOn = false;
 
-  public Sensor(AirConditional airConditional, Controller controller) {
+  public Sensor(AirConditional airConditional) {
     this.airConditional = airConditional;
-    this.controller = controller;
     initComponents();
     setResizable(false);
     setTitle("Sensor");
@@ -57,18 +58,20 @@ public class Sensor extends javax.swing.JFrame {
     initEvent();
   }
 
+  // Event change from controller
   private void initEvent() {
-    controller.getControllerTempSlider().addChangeListener(new javax.swing.event.ChangeListener() {
-      public void stateChanged(javax.swing.event.ChangeEvent evt) {
-        controllerTempSliderStateChanged(evt);
+    airConditional.getAirTempIndexLabel().addPropertyChangeListener(new PropertyChangeListener() {
+      public void propertyChange(PropertyChangeEvent evt) {
+        airTempStateChanged(evt);
       }
     });
   }
 
-  private void controllerTempSliderStateChanged(javax.swing.event.ChangeEvent evt) {
+  private void airTempStateChanged(PropertyChangeEvent evt) {
     this.callService("AirConditional", "SwitchPower", "Get", "Status", 0);
     if (isOn) {
-      int currentTemp = ((JSlider) evt.getSource()).getValue();
+      String temperature = ((JLabel) evt.getSource()).getText().replaceAll(Unit.tempUnit, "");
+      int currentTemp = Integer.valueOf(temperature);
       sensorTempSlider.setValue(currentTemp);
       sensorTempLabel.setText(
         Unit.temperatureLabel + " (" + String.valueOf(currentTemp) + Unit.tempUnit + "): ");
@@ -153,11 +156,8 @@ public class Sensor extends javax.swing.JFrame {
         @SuppressWarnings("rawtypes")
         ActionArgumentValue[] args = invocation.getInput();
         for (int i = 0; i < args.length; i++) {
-          if (args[i].getArgument().getName().equals("NewTemperature")) {
-            int value = (Integer) args[i].getValue();
-            airConditional.setAirTempIndexLabel(value);
-            controller.setControllerTempSlider(value);
-          }
+          if (args[i].getArgument().getName().equals("NewTemperature"))
+            airConditional.setAirTempIndexLabel((Integer) args[i].getValue());
         }
       }
 
