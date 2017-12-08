@@ -158,7 +158,6 @@ public class Controller extends javax.swing.JFrame {
           if (argument.equals("NewTemperature")) {
             airConditional.setAirTempIndexLabel((Integer) value);
           } else if (argument.equals("NewSpeed")) {
-            System.out.println("CO VAO DAY");
             airConditional.setAirSpeedIndexLabel((Integer) value);
           } else if (argument.equals("NewDirection")) {
             airConditional.setAirDirectionIndexLabel((Integer) value);
