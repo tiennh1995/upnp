@@ -29,9 +29,14 @@ public class ControlServer implements Runnable {
       });
 
       Device deviceTemp = new Device("Temperature Sensor", "TemperatureSensor",
-        "Temperature Sensor", "icon/temperature_sensor.png", ChangeTemperature.class.getName());
+        "Temperature Sensor", "icon/temperature_sensor.png", SwitchPower.class.getName());
       LocalDevice localDeviceTemp = deviceTemp.getDevice();
       upnpService.getRegistry().addDevice(localDeviceTemp);
+
+      Device deviceUser = new Device("User Sensor", "UserSensor", "User Sensor",
+        "icon/user_sensor.png", SwitchPower.class.getName());
+      LocalDevice localDeviceUser = deviceUser.getDevice();
+      upnpService.getRegistry().addDevice(localDeviceUser);
 
       Device deviceAir = new Device("Air Conditional", "AirConditional", "Air Conditional",
         "icon/air_conditional.png",
@@ -40,10 +45,10 @@ public class ControlServer implements Runnable {
       LocalDevice localDeviceAir = deviceAir.getDevice();
       upnpService.getRegistry().addDevice(localDeviceAir);
 
-      Device deviceUser = new Device("User Sensor", "UserSensor", "User Sensor",
-        "icon/user_sensor.png", SwitchPower.class.getName());
-      LocalDevice localDeviceUser = deviceUser.getDevice();
-      upnpService.getRegistry().addDevice(localDeviceUser);
+      Device deviceController = new Device("Controller", "Controller", "Controller",
+        "icon/controller.png", SwitchPower.class.getName());
+      LocalDevice localDeviceController = deviceController.getDevice();
+      upnpService.getRegistry().addDevice(localDeviceController);
     } catch (Exception ex) {
       System.err.println("Exception occured: " + ex);
       ex.printStackTrace(System.err);
